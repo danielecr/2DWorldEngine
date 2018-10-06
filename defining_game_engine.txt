@@ -1,0 +1,256 @@
+Define a phisycal engine for a game.
+
+Why? do not do it.
+
+How to start?
+
+Every object is subject to phisycal law.
+
+That is a definition, or 2: object, phisical law.
+
+Phisical Law (PL) can be separated in 2 kind: body constraint, forces applied to body.
+
+And body===object.
+
+So an Object has constraints and forces.
+
+Forces are formulas that applied to the properties of an object make its state in the world change.
+
+So there is a world.
+
+And so an object has a place in that world, a configuration relative to that world.
+
+There are properties intrinically bounded to an object, and properties related to that object AND the world where it live.
+
+Physical Laws are external to the object, in fact those apply to all object belonging to that world.
+
+So we can say that physical laws are part of the world.
+
+And we define a 
+
+class World {
+   applyLaws: object => object
+}
+
+That looks very simple.
+
+We leaved out constraints.
+
+Constraints are where collition detection concept is involved. So World object must be aware of All the object belonging to it (as one would expect).
+
+Simply:
+
+class World {
+   applyLaws: object => object,
+   object_list: [...objects]
+}
+
+Physical law are most of the time related to the time passing. Those are in fact ALWAYS related to time.
+
+Say:
+
+class World {
+   const dt = 10
+   applyLaws: (object,dt) => object,
+   object_list: [...objects]
+
+   applyAllLaws() {
+	object_list.forEach( ( obj) => {
+             applyLaws(obj,this.dt);
+        });
+   }
+
+   init () {
+	setTimeinterval(this.applyAllLaws, this.dt);
+   }
+}
+
+Now we have a dt, but what happen if applying the laws to all object (all laws to all objects) there are violated constraints?
+
+That is the problem with the engine.
+
+But I leaved out a concept here: Actions.
+
+An Action is a force applied by the object to itself or to other object deliberately and being not part of the world.
+
+Simply put, an action is a non-inertial force. But mostly there is nothing different there.
+
+It happens that an action is a law applyed to the object itself PLUS the colliding object. So there is a conditional:
+
+
+class World {
+   const dt = 10
+   applyLaws: (object,dt) => object,
+   object_list: [...objects]
+
+   applyAllLaws() {
+	object_list.forEach( ( obj ) => {
+             applyLaws(obj,this.dt);
+	     if ( isMakingAction(obj) ) {
+		getCollidingObjects(obj).forEach( ( colObj, forceLaw) => {
+			applyLaw( colObj, forceLaw);
+		})
+	     })
+        });
+	drawTheWorld();
+   }
+
+   init () {
+	setTimeinterval(this.applyAllLaws, this.dt);
+   }
+}
+
+
+Now. What the hell is that "law applyed to the object"-concept/abstraction looking like?
+
+Simplyfing for a 2D-World object has a position and a rotation state on that world. But at the very basical incarnation of old-fashioned-2d-games as super mario, we can ignore their rotation state at all.
+
+Superclass Object {
+   position_x: lowcornerleftpixelhorizontalcoord
+   position_y: lowcornerleftpixelverticalcoord
+   copyWithPosition: (x,y) => selfWithXYreplaced
+}
+
+About the shape of the laws, taking super mario bross as reference, there is a (almost) linear function that apply to everything that fall down,
+or, if it is bilinear the a cohefficent is very little (in a*y^2+b*y formula).
+For the actions, applied forces coming from will of the player/characters, the will is a bilinear force which expires its effect. Here man must be carefull to take things separated: the will will chease its effect when it meet the zero, but the counterforce coming from the physic of the world will continue to apply.
+
+So a will has an expiration after a time big-d-t, and is related to an object, other laws are not related to a particular object but to all.
+
+I would to simplify formulas but being only a summ, I just summ laws:
+
+class World {
+   const dt = 10
+
+   applyLaw: (object, f, dt) => object,
+
+   worlds_laws: [...fn]
+
+   object_list: [...objects]
+
+   simplifyLaws: ([...fn])=> (x,y,dt) => { return reduce(fns,(acc, fn) => {return acc+ fn(x,y,dt); }) }
+
+   applyAllLaws() {
+	object_list.forEach( ( obj ) => {
+             let f_in_dt = simplifyLaws(this.worlds_laws);
+	     if ( isMakingAction(obj) ) {
+		getCollidingObjects(obj).forEach( ( colObj, forceLaw) => {
+			let f = simplifyLaws( [f_in_dt, forceLaw] );
+			applyLaw(colObj, f, dt)
+		})
+		let f = simplifyLaws( [f_in_dt, obj.actionFn] );
+		applyLaw(obj, f, dt)
+	     })
+        });
+	drawTheWorld();
+   }
+
+   init () {
+	setTimeinterval(this.applyAllLaws, this.dt);
+   }
+}
+
+Here are 2 kind of problems (at least 2). 
+1. Where does the new object list are stored? and what to use, taking into account that colliding objects are also part of the initial set?
+2. Some object are suscettible of horizontal forces, some are suscettible to vertical forces, some are suscettible to vertical collition, some to horizontal collition.
+
+I do not care too much about 1., it is trivial. But for 2. I make some example.
+
+A wall is not suscettible to horizontal, neither vertical collition.
+
+A brick is suscettible of horizontal collition, and to vertical collition.
+
+But wait, collitions are transformed to forces ... sometime, sometime just disappear.
+
+So problem 1. and 2. can be groupped by a distribuiteForcesBetweenObjects step and a applyForces step.
+
+
+class World {
+   const dt = 10
+
+   applyLaw: (object, f, dt) => object,
+
+   worlds_laws: [...fn]
+
+   object_list: [...objects]
+
+   simplifyLaws: ([...fn])=> (x,y,dt) => { return reduce(fns,(acc, fn) => {return acc+ fn(x,y,dt); }) }
+
+   distribuiteForcesBetweenObjects: (objlist, worlds_laws) => objlist
+
+   applyAllLaws() {
+	distribuiteForcesBetweenObjects(this.objxxtlist, this.worlds_laws).forEach( (obj) => {
+		object_list.forEach( ( obj ) => {
+			let f_in_dt = simplifyLaws(obj);
+			applyLaws(obj, f_in_dt, dt);
+		});
+	});
+	drawTheWorld();
+   }
+
+   init () {
+	setTimeinterval(this.applyAllLaws, this.dt);
+   }
+}
+
+Now things look cleaner, it must be the distribuiteForcesBetweenObjects function that take all the complexities.
+Let's see.
+
+distribuiteForcesBetweenObjects = (objectList, laws) => {
+	let objList = addCollitions(objectList);
+	// now with collition and forces (laws) transform laws and returns the list
+	return transformLaws(objList);
+}
+
+So, where it is gone the complexity?
+
+let addCollitions = (objectList) => {
+	// it is an O(n^2) function
+	return objectList.map( ( pointA_obj, i) => {
+		let pA_forces = objectList.reduce( ( acc, pointB_obj) => {
+			if (identical(pointA_obj, pointB_obj) {
+				return acc;
+			}
+			if ( doCollide(pointA_obj, pointB_obj) ) {
+				let newAcc = acc.clone();
+				// When 2 object collide half of the force of object A given to the object B. It is needed to
+				// avoiding duplication of effect. (But we can confide no more than double effect would happen)
+				// So at every round just split (subtract) the forces against pointB, and Add force received from pointB.
+				// Also the ratio of forces exchanged can depends from the object characteristics, such as its weight.
+				// It is simplier to split forces by the 2 directions: vertical and horizontal
+				if (isVerticallyAgainstActive(pointA_obj, pointB_obj) ) {
+					newAcc = vSubtractForce(newAcc, forceExtractV(pointA_obj, pointB_obj) );
+				}
+				if (isHorizontalAgainstActive(pointA_obj, pointB_obj) ) {
+					newAcc = hSubtractForce(newAcc, forceExtractH(pointA_obj, pointB_obj) );
+				}
+				if (isVerticallyAgainstPassive(pointA_obj, pointB_obj) ) {
+					newAcc = vAddForce(newAcc, forceExtractV(pointA_obj, pointB_obj) );
+				}
+				if (isHorizontalAgainstPassive(pointA_obj, pointB_obj) ) {
+					newAcc = hAddForce(newAcc, forceExtractH(pointA_obj, pointB_obj) );
+				}
+				return newAcc;
+			}
+			return acc;
+		}, new Force((x,y,t)=>x,y) );
+		return pointA_obj.replaceForce(pA_forces);
+	});
+}
+
+Here are some concept still not handled. Forces or laws. During reduce step the acc is in fact an object (new Force(fn)).
+
+When an object is falling it acquires forces, so applying a force it results in a new position and new force:
+
+let applyForce = (fn, x, y, dt) => { return {newFn, x, y} }
+
+But [d][op]Force kind of functions do not change the position of the object:
+
+let vSubtractForce = (Force, fn) => { return new Force(fn) }
+
+Still it is not clear how to define Force object.
+
+
+What I miss out now is the real implementation.
+
+
