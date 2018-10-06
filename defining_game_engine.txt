@@ -26,7 +26,7 @@ Physical Laws are external to the object, in fact those apply to all object belo
 
 So we can say that physical laws are part of the world.
 
-And we define a 
+And we define a
 
 class World {
    applyLaws: object => object
@@ -150,7 +150,7 @@ class World {
    }
 }
 
-Here are 2 kind of problems (at least 2). 
+Here are 2 kind of problems (at least 2).
 1. Where does the new object list are stored? and what to use, taking into account that colliding objects are also part of the initial set?
 2. Some object are suscettible of horizontal forces, some are suscettible to vertical forces, some are suscettible to vertical collition, some to horizontal collition.
 
@@ -248,9 +248,42 @@ But [d][op]Force kind of functions do not change the position of the object:
 
 let vSubtractForce = (Force, fn) => { return new Force(fn) }
 
-Still it is not clear how to define Force object.
+Still it is not clear how to define Force object. It is desiderable to separate
+components of a force by the ortogonal axis, Vertical and Horizontal, or X and Y.
+
+fnX: (dt) => (x, fn_a_X)
+fnY: (dt) => (y, fn_a_Y)
+
+Also forces are annihilating or amplifing, but there could be not switch between
+the two: an annihilating force will never become amplifing. Es.:
+
+x = (-1)*x*t^2 + x * t
+
+become Zero at t = 1, so after time == 1 (sums of dt == 1) the force annihilates
+and do not continue to decellerates, or better do not start to accellerate on the
+opposite direction.
+
+annihilate_time is an information that should be carried with the Force object.
+
+Also the information about the direction should be stored into the Force object,
+as this is useful to understand if it is against (discordant) or in favor
+(according) to the Force of a colliding object.
+
+
+in either the cases it could
+be expressed as a linear function in position and time interval returning a position and
+a function:
+
+
+At least theorically. But how?
+
+Given fnX = a*X^2 + b*X +c
+
+class Force {
+    constructor(fn) {
+        this.fn = fn;
+    }
+}
 
 
 What I miss out now is the real implementation.
-
-
